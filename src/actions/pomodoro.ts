@@ -1,117 +1,99 @@
 import {
   action,
-  KeyDownEvent,
   KeyUpEvent,
   SingletonAction,
   WillAppearEvent,
+  DidReceiveSettingsEvent,
 } from "@elgato/streamdeck";
 
-type PomodoroSettings = {
-  timer?: number; // en minutes éventuellement (25, 15, etc.)
-};
-
-const DEFAULT_DURATION_SECONDS = 25 * 60; // 25 minutes
-const LONG_PRESS_THRESHOLD_MS = 600; // au-delà de 600ms = "appui long"
+type PomodoroSettings = { focus_time?: number };
+const DEFAULT_MINUTES = 25;
+const LONG_PRESS_MS = 600;
 
 @action({ UUID: "com.linoa.pomodoro-sd.pomodoro-timer" })
 export class PomodoroTimer extends SingletonAction<PomodoroSettings> {
-  private remaining: number = DEFAULT_DURATION_SECONDS;
-  private intervalId: ReturnType<typeof setInterval> | null = null;
-  private isRunning: boolean = false;
-
-  // pour différencier appui court / appui long
+  private intervalId: NodeJS.Timeout | null = null;
   private pressStartTimestamp: number | null = null;
 
+  private remainingSeconds: number = DEFAULT_MINUTES * 60;
+  private targetDuration: number = DEFAULT_MINUTES * 60;
+
   override onWillAppear(ev: WillAppearEvent<PomodoroSettings>) {
-    ev.action.setTitle(this.formatTime(this.remaining));
+    this.syncSettings(ev);
   }
 
-  override onKeyDown(ev: KeyDownEvent<PomodoroSettings>) {
-    // on enregistre le moment où la touche est pressée
+  override onDidReceiveSettings(ev: DidReceiveSettingsEvent<PomodoroSettings>) {
+    this.syncSettings(ev);
+  }
+
+  override onKeyDown() {
     this.pressStartTimestamp = Date.now();
   }
 
   override onKeyUp(ev: KeyUpEvent<PomodoroSettings>) {
-    if (this.pressStartTimestamp === null) {
-      return;
-    }
+    if (!this.pressStartTimestamp) return;
 
-    const pressDuration = Date.now() - this.pressStartTimestamp;
+    const isLongPress = Date.now() - this.pressStartTimestamp > LONG_PRESS_MS;
     this.pressStartTimestamp = null;
 
-    // Appui long → reset
-    if (pressDuration >= LONG_PRESS_THRESHOLD_MS) {
-      this.reset(ev);
-      return;
-    }
-
-    // Appui court → start / pause
-    if (this.isRunning) {
-      this.pause();
+    if (isLongPress) {
+      this.reset(ev.action);
     } else {
-      this.start(ev);
+      this.toggleTimer(ev.action);
     }
   }
 
-  private start(
-    ev: KeyDownEvent<PomodoroSettings> | KeyUpEvent<PomodoroSettings>
+  private syncSettings(
+    ev:
+      | WillAppearEvent<PomodoroSettings>
+      | DidReceiveSettingsEvent<PomodoroSettings>
   ) {
-    // si déjà en cours, on ne relance pas
-    if (this.isRunning) return;
+    const minutes = ev.payload.settings.focus_time ?? DEFAULT_MINUTES;
+    this.targetDuration = minutes * 60;
 
-    // si le timer est à 0, on repart du début
-    if (this.remaining <= 0) {
-      this.remaining = DEFAULT_DURATION_SECONDS;
+    if (!this.intervalId) {
+      this.remainingSeconds = this.targetDuration;
+      this.updateDisplay(ev.action);
     }
-
-    this.isRunning = true;
-
-    this.intervalId = setInterval(async () => {
-      this.remaining--;
-
-      await ev.action.setTitle(this.formatTime(this.remaining));
-
-      if (this.remaining <= 0) {
-        this.remaining = 0;
-        // fin du timer → on stoppe tout
-        if (this.intervalId) {
-          clearInterval(this.intervalId);
-          this.intervalId = null;
-        }
-        this.isRunning = false;
-        // tu peux ajouter ici un son / une notif si tu veux
-      }
-    }, 1000);
   }
 
-  private pause() {
-    if (!this.isRunning) return;
+  private toggleTimer(action: any) {
+    if (this.intervalId) {
+      this.stop();
+    } else {
+      if (this.remainingSeconds <= 0)
+        this.remainingSeconds = this.targetDuration;
 
-    this.isRunning = false;
+      this.intervalId = setInterval(() => this.tick(action), 1000);
+    }
+  }
 
+  private tick(action: any) {
+    this.remainingSeconds--;
+    this.updateDisplay(action);
+
+    if (this.remainingSeconds <= 0) {
+      this.stop();
+      action.setTitle("Done");
+    }
+  }
+
+  private reset(action: any) {
+    this.stop();
+    this.remainingSeconds = this.targetDuration;
+    this.updateDisplay(action);
+  }
+
+  private stop() {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    // on garde `remaining` tel quel, pour pouvoir reprendre plus tard
   }
 
-  private reset(ev: KeyUpEvent<PomodoroSettings>) {
-    // stoppe le timer s'il tourne
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-
-    this.isRunning = false;
-    this.remaining = DEFAULT_DURATION_SECONDS;
-
-    ev.action.setTitle(this.formatTime(this.remaining));
-  }
-
-  private formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
+  private updateDisplay(action: any) {
+    const m = Math.floor(this.remainingSeconds / 60);
+    const s = this.remainingSeconds % 60;
+    action.setTitle(`${m}:${s.toString().padStart(2, "0")}`);
   }
 }

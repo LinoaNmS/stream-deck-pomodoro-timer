@@ -6,11 +6,16 @@
     <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
   </head>
   <body>
-    <sdpi-item label="Focus timer">
-      <sdpi-textfield
-      settings="timer"
-        required>
-    </sdpi-textfield>
+    <sdpi-item label="Focus time">
+      <sdpi-range
+        setting="focus_time"
+        min="0"
+        max="100"
+        step="1"
+        default="25"
+        showlabels
+      >
+      </sdpi-range>
     </sdpi-item>
   </body>
 </html>

@@ -13,7 +13,7 @@
       "Controllers": ["Keypad"],
       "States": [
         {
-          "Image": "imgs/actions/counter/key",
+          "Image": "",
           "TitleAlignment": "middle"
         }
       ]
