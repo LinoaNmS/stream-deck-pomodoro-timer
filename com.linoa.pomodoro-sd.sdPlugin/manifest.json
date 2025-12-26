@@ -1,66 +1,47 @@
 {
-	"Name": "Pomodoro-SD",
-	"Version": "0.1.0.0",
-	"Author": "Linoa",
-	"Actions": [
-		{
-			"Name": "Start Pomodoro Timer",
-			"UUID": "com.linoa.pomodoro-sd.pomodoro-timer.start",
-			"Icon": "imgs/actions/pomodoro-timer/icon",
-			"Tooltip": "A pomodoro timer",
-			"SupportedInKeyLogicActions": true,
-			"PropertyInspectorPath": "ui/pomodoro-timer.html",
-			"Controllers": [
-				"Keypad"
-			],
-			"States": [
-				{
-					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle"
-				}
-			]
-		},
-		{
-			"Name": "Pause Pomodoro Timer",
-			"UUID": "com.linoa.pomodoro-sd.pomodoro-timer",
-			"Icon": "imgs/actions/pomodoro-timer/icon",
-			"Tooltip": "A pomodoro timer",
-			"SupportedInKeyLogicActions": true,
-			"PropertyInspectorPath": "ui/pomodoro-timer.html",
-			"Controllers": [
-				"Keypad"
-			],
-			"States": [
-				{
-					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle"
-				}
-			]
-		}
-	],
-	"Category": "Pomodoro-SD",
-	"CategoryIcon": "imgs/plugin/category-icon",
-	"CodePath": "bin/plugin.js",
-	"Description": "A Clean pomodoro timer for Steamdeck",
-	"Icon": "imgs/plugin/marketplace",
+  "Name": "Pomodoro-SD",
+  "Version": "0.1.0.0",
+  "Author": "Linoa",
+  "Actions": [
+    {
+      "Name": "Pomodoro Timer",
+      "UUID": "com.linoa.pomodoro-sd.pomodoro-timer",
+      "Icon": "imgs/actions/pomodoro-timer/icon",
+      "Tooltip": "A pomodoro timer",
+      "SupportedInKeyLogicActions": true,
+      "PropertyInspectorPath": "ui/pomodoro-timer.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/counter/key",
+          "TitleAlignment": "middle"
+        }
+      ]
+    }
+  ],
+  "Category": "Pomodoro-SD",
+  "CategoryIcon": "imgs/plugin/category-icon",
+  "CodePath": "bin/plugin.js",
+  "Description": "A Clean pomodoro timer for Steamdeck",
+  "Icon": "imgs/plugin/marketplace",
 
-	"SDKVersion": 2,
-	"Software": {
-		"MinimumVersion": "7"
-	},
-	"OS": [
-		{
-			"Platform": "mac",
-			"MinimumVersion": "12"
-		},
-		{
-			"Platform": "windows",
-			"MinimumVersion": "10"
-		}
-	],
-	"Nodejs": {
-		"Version": "20",
-		"Debug": "enabled"
-	},
-	"UUID": "com.linoa.pomodoro-sd"
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "7.0"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "12"
+    },
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Nodejs": {
+    "Version": "20",
+    "Debug": "enabled"
+  },
+  "UUID": "com.linoa.pomodoro-sd"
 }
