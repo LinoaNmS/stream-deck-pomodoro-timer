@@ -6,7 +6,19 @@ import {
   DidReceiveSettingsEvent,
 } from "@elgato/streamdeck";
 
-type PomodoroSettings = { focus_time?: number };
+type PomodoroSettings = {
+  focus_time?: number;
+  short_break_time?: number;
+  long_break_time?: number;
+};
+
+enum PomodoroPhase {
+  IDLE,
+  WORK,
+  SHORT_BREAK,
+  LONG_BREAK,
+}
+
 const DEFAULT_MINUTES = 25;
 const LONG_PRESS_MS = 600;
 
@@ -14,16 +26,19 @@ const LONG_PRESS_MS = 600;
 export class PomodoroTimer extends SingletonAction<PomodoroSettings> {
   private intervalId: NodeJS.Timeout | null = null;
   private pressStartTimestamp: number | null = null;
+  private currentSettings: PomodoroSettings = {};
+  private pomodoroCount: number = 0;
 
+  private pomodoroState: PomodoroPhase = PomodoroPhase.IDLE;
   private remainingSeconds: number = DEFAULT_MINUTES * 60;
   private targetDuration: number = DEFAULT_MINUTES * 60;
 
   override onWillAppear(ev: WillAppearEvent<PomodoroSettings>) {
-    this.syncSettings(ev);
+    this.updateSettingsAndDisplay(ev.payload.settings, ev.action);
   }
 
   override onDidReceiveSettings(ev: DidReceiveSettingsEvent<PomodoroSettings>) {
-    this.syncSettings(ev);
+    this.updateSettingsAndDisplay(ev.payload.settings, ev.action);
   }
 
   override onKeyDown() {
@@ -43,17 +58,12 @@ export class PomodoroTimer extends SingletonAction<PomodoroSettings> {
     }
   }
 
-  private syncSettings(
-    ev:
-      | WillAppearEvent<PomodoroSettings>
-      | DidReceiveSettingsEvent<PomodoroSettings>
-  ) {
-    const minutes = ev.payload.settings.focus_time ?? DEFAULT_MINUTES;
-    this.targetDuration = minutes * 60;
-
+  private updateSettingsAndDisplay(settings: PomodoroSettings, action: any) {
+    this.currentSettings = settings;
     if (!this.intervalId) {
+      this.targetDuration = this.getDurationForPhase(this.pomodoroState);
       this.remainingSeconds = this.targetDuration;
-      this.updateDisplay(ev.action);
+      this.updateDisplay(action);
     }
   }
 
@@ -61,8 +71,11 @@ export class PomodoroTimer extends SingletonAction<PomodoroSettings> {
     if (this.intervalId) {
       this.stop();
     } else {
-      if (this.remainingSeconds <= 0)
+      if (this.pomodoroState === PomodoroPhase.IDLE) {
+        this.pomodoroState = PomodoroPhase.WORK;
+        this.targetDuration = this.getDurationForPhase(PomodoroPhase.WORK);
         this.remainingSeconds = this.targetDuration;
+      }
 
       this.intervalId = setInterval(() => this.tick(action), 1000);
     }
@@ -74,13 +87,57 @@ export class PomodoroTimer extends SingletonAction<PomodoroSettings> {
 
     if (this.remainingSeconds <= 0) {
       this.stop();
-      action.setTitle("Done");
+      this.switchToNextPhase(action);
     }
+  }
+
+  private switchToNextPhase(action: any) {
+    if (this.pomodoroState === PomodoroPhase.WORK) {
+      this.pomodoroCount++;
+
+      if (this.pomodoroCount >= 4) {
+        this.pomodoroState = PomodoroPhase.LONG_BREAK;
+        this.pomodoroCount = 0;
+        action.setTitle("Long\nBreak");
+      } else {
+        this.pomodoroState = PomodoroPhase.SHORT_BREAK;
+        action.setTitle("Short\nBreak");
+      }
+    } else {
+      this.pomodoroState = PomodoroPhase.WORK;
+      action.setTitle("Go\nWork");
+    }
+
+    this.targetDuration = this.getDurationForPhase(this.pomodoroState);
+    this.remainingSeconds = this.targetDuration;
+  }
+
+  private getDurationForPhase(phase: PomodoroPhase): number {
+    let minutes = 25;
+
+    switch (phase) {
+      case PomodoroPhase.IDLE:
+      case PomodoroPhase.WORK:
+        minutes = this.currentSettings.focus_time ?? 25;
+        break;
+      case PomodoroPhase.SHORT_BREAK:
+        minutes = this.currentSettings.short_break_time ?? 5;
+        break;
+      case PomodoroPhase.LONG_BREAK:
+        minutes = this.currentSettings.long_break_time ?? 15;
+        break;
+    }
+    return minutes * 60;
   }
 
   private reset(action: any) {
     this.stop();
+    this.pomodoroState = PomodoroPhase.IDLE;
+    this.pomodoroCount = 0;
+
+    this.targetDuration = this.getDurationForPhase(PomodoroPhase.WORK);
     this.remainingSeconds = this.targetDuration;
+
     this.updateDisplay(action);
   }
 
